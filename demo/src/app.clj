@@ -1,5 +1,4 @@
-(ns app
-  (:require [demo]))
+(ns app)
 
 (def context (atom nil))
 
