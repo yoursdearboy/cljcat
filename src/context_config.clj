@@ -53,7 +53,7 @@
   (dorun (for [path (:resource-paths project)
                :let [f (io/file path)]
                :when (.exists f)]
-           (create-web-resource-set resources :pre "/META-INF/resources" path nil "/"))))
+           (create-web-resource-set resources :pre "/WEB-INF/classes" path nil "/"))))
 
 (defn -init []
   [[] (atom {:project nil})])
