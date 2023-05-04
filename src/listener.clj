@@ -2,9 +2,8 @@
   (:gen-class
    :name org.cljcat.ServletContextListener
    :implements [javax.servlet.ServletContextListener])
-  (:require [leiningen.core.project :as lein]
-            [leiningen.core.classpath :as classpath]
-            [cemerick.pomegranate :as pomegranate]))
+  (:require [classlojure.core :refer [with-classloader]]
+            [leiningen.core.project :as lein]))
 
 ;; See Pomegranate docs on availability of DynamicClassLoader.
 ;; https://github.com/clj-commons/pomegranate/blob/master/doc/01-user-guide.adoc#modifying-the-classpath-and-jdk-9
@@ -16,25 +15,23 @@
   (when-not (bound? Compiler/LOADER)
     (.bindRoot Compiler/LOADER (clojure.lang.DynamicClassLoader. (clojure.lang.RT/baseLoader)))))
 
-;; Leiningen dependencies resolution, but with DynamiClassLoader instead of Context one. See:
-;; https://github.com/technomancy/leiningen/blob/24fb93936133bd7fc30c393c127e9e69bb5f2392/leiningen-core/src/leiningen/core/project.clj#LL997C7-L997C11
-(defn load-project-dependencies [project]
-  (ensure-compiler-loader)
-  (let [cl (deref clojure.lang.Compiler/LOADER)]
-    (doseq [path (classpath/get-classpath project)]
-      (pomegranate/add-classpath path cl))))
+(defmacro with-compiler-loader [& body]
+  `(with-classloader (deref clojure.lang.Compiler/LOADER) ~@body))
 
 (defn -contextInitialized [_ event]
   (let [ctx (.getServletContext event)
         path (.getRealPath ctx "project.clj")
         project (lein/read path)]
-    (load-project-dependencies project)
-    (.setAttribute ctx "project" project)
-    (when-let [handler (-> project :cljcat :init)]
-      ((requiring-resolve handler) event))))
+    (ensure-compiler-loader)
+    (with-compiler-loader
+      (lein/init-lein-classpath (assoc project :eval-in :leiningen))
+      (.setAttribute ctx "project" project)
+      (when-let [handler (-> project :cljcat :init)]
+        ((requiring-resolve handler) event)))))
 
 (defn -contextDestroyed [_ event]
   (let [ctx (.getServletContext event)
         project (.getAttribute ctx "project")]
-    (when-let [handler (-> project :cljcat :destroy)]
-      ((requiring-resolve handler) event))))
+    (with-compiler-loader
+      (when-let [handler (-> project :cljcat :destroy)]
+        ((requiring-resolve handler) event)))))

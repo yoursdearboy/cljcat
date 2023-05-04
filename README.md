@@ -41,3 +41,7 @@ Another source of configuration is `project` attribute of servlet's context, whi
         (.getServletContext)
         (.getAttribute ctx "project"))))
 ```
+
+## Ideas
+
+Implement custom classloader for Tomcat using `<Loader>`, instead of setting context's class loader on each request.
