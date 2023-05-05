@@ -20,6 +20,9 @@ ENV BOOT_VERSION=2.8.3
 # [Optional] Clojure version used by Boot
 ENV BOOT_CLOJURE_VERSION=${CLOJURE_VERSION}
 
+# [Optional] Tomcat url (to change version)
+ENV TOMCAT_URL="https://archive.apache.org/dist/tomcat/tomcat-9/v9.0.73/bin/apache-tomcat-9.0.73.tar.gz"
+
 # [Option] Install Clojure CLI tool
 ARG INSTALL_CLOJURE_CLI="true"
 
@@ -31,6 +34,9 @@ ARG INSTALL_LEININGEN="true"
 
 # [Option] Install Polylith
 ARG INSTALL_POLYLITH="false"
+
+# [Option] Install Tomcat
+ARG INSTALL_TOMCAT="true"
 
 RUN if [ "${INSTALL_CLOJURE_CLI}" = "true" ]; then \
     apt-get update \
@@ -66,6 +72,13 @@ RUN if [ "${INSTALL_POLYLITH}" = "true" ]; then \
     && echo '#!/bin/sh\nARGS=""\nwhile [ "$1" != "" ] ; do\n  ARGS="$ARGS $1"\n  shift\ndone\nexec "java" $JVM_OPTS "-jar" "/usr/local/polylith/poly-'$POLYLITH_VERSION'.jar" $ARGS\n' > /usr/local/sbin/poly \
     && chmod +x /usr/local/sbin/poly \
     && /usr/local/sbin/poly version; fi
+
+RUN if [ "${INSTALL_TOMCAT}" = "true" ]; then \
+    curl -L ${TOMCAT_URL} -o tomcat.tar.gz \
+    && mkdir /usr/local/tomcat \
+    && tar -xf tomcat.tar.gz -C /usr/local/tomcat --strip-components 1 \
+    && chown -R vscode:vscode /usr/local/tomcat \
+    && rm tomcat.tar.gz ; fi
 
 # [Choice] Node.js version: none, lts/*, 16, 14, 12, 10
 ARG NODE_VERSION="lts/*"
