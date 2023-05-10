@@ -7,14 +7,18 @@
   (:import [org.apache.catalina Lifecycle WebResourceRoot$ResourceSetType]
            [org.apache.catalina.webresources FileResourceSet StandardRoot])
   (:require [clojure.java.io :as io]
-            [leiningen.core.project :as lein]))
+            [leiningen.core.project :as lein]
+            [cl]))
 
 (defn load-project [host ctx]
   (let [app-base (.getAppBaseFile host)
         doc-base (io/file (.getDocBase ctx))
         base (if (.isAbsolute doc-base) doc-base (io/file app-base doc-base))
         project-file (io/file base "project.clj")]
-    (when (.exists project-file) (lein/read (.getAbsolutePath project-file)))))
+    (when (.exists project-file)
+      (cl/ensure-compiler-loader)
+      (cl/with-compiler-loader
+        (lein/read (.getAbsolutePath project-file))))))
 
 (defn add-servlet [ctx]
   (-> ctx
